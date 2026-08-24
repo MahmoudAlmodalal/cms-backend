@@ -64,7 +64,7 @@ THIRD_PARTY_APPS = [
 
 COUNTRIES_OVERRIDE = {"IL": None}
 
-LOCAL_APPS = ["apps.core", "apps.content", "apps.users", "apps.publishers", "apps.quran"]
+LOCAL_APPS = ["apps.core", "apps.content", "apps.users", "apps.publishers", "apps.quran", "apps.finance"]
 
 
 MIDDLEWARE = [
@@ -83,7 +83,7 @@ MIDDLEWARE = [
     "oauth2_provider.middleware.OAuth2TokenMiddleware",
 ]
 
-CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_ALL_ORIGINS = False
 
 ROOT_URLCONF = "config.urls"
 
@@ -234,12 +234,19 @@ REST_FRAMEWORK = {
 }
 
 # CORS Settings
-CORS_ALLOWED_ORIGINS = [
+FRONTEND_BASE_URL = config("FRONTEND_BASE_URL", default="http://localhost:4200").rstrip("/")
+CORS_ALLOWED_ORIGINS = list(
+    dict.fromkeys(
+        [
+            FRONTEND_BASE_URL,
     "http://localhost:4200",
     "http://127.0.0.1:4200",
     "http://localhost:3000",
     "http://127.0.0.1:3000",
-]
+        ]
+    )
+)
+CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS
 
 CORS_ALLOW_CREDENTIALS = True
 
@@ -320,7 +327,6 @@ SOCIALACCOUNT_FORMS = {"signup": "apps.users.forms.UserSocialSignupForm"}
 SOCIALACCOUNT_EMAIL_AUTHENTICATION_AUTO_CONNECT = True
 
 # HEADLESS_ONLY = True
-FRONTEND_BASE_URL = config("FRONTEND_BASE_URL", default="http://localhost:4200")
 HEADLESS_FRONTEND_URLS = {
     "account_confirm_email": FRONTEND_BASE_URL + "/accounts/confirm-email/{key}/",
     "account_reset_password": FRONTEND_BASE_URL + "/account/password/reset",
@@ -475,7 +481,7 @@ CACHES = {
 
 SESSION_ENGINE = "django.contrib.sessions.backends.db"
 SESSION_CACHE_ALIAS = "default"
-SESSION_COOKIE_HTTPONLY = False  # not very secure, if FE moved to browser mode, remove this
+SESSION_COOKIE_HTTPONLY = True
 
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_BROWSER_XSS_FILTER = True
