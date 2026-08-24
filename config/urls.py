@@ -26,7 +26,6 @@ def health_check(request):
 
 urlpatterns = [
     path("health/", health_check, name="health_check"),
-    path("api/v1/", include("apps.finance.urls")),
     # Django Admin
     path("django-admin/", admin.site.urls),
     # Django Allauth URLs
