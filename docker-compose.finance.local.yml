@@ -1,0 +1,89 @@
+name: mahfazati-local
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: mahfazati
+      POSTGRES_USER: mahfazati
+      POSTGRES_PASSWORD: mahfazati_local_password
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mahfazati -d mahfazati"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    ports:
+      - "5432:5432"
+    volumes:
+      - mahfazati_postgres_data:/var/lib/postgresql/data
+
+  api:
+    build:
+      context: .
+      dockerfile: deployment/docker/Dockerfile.backend
+      args:
+        DEPENDENCY_GROUP: dev
+    env_file:
+      - .env.finance.local
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.development
+      DB_NAME: mahfazati
+      DB_USER: mahfazati
+      DB_PASSWORD: mahfazati_local_password
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      REDIS_URL: redis://redis:6379/1
+      CELERY_TASK_ALWAYS_EAGER: "True"
+      PYTHONUNBUFFERED: "1"
+    entrypoint: ["/bin/sh", "-c"]
+    command: >
+      python manage.py migrate --noinput &&
+      python manage.py runserver 0.0.0.0:8000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8000/health/ >/dev/null"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+      - backend_venv:/app/.venv
+
+  frontend:
+    build:
+      context: ../p2
+      dockerfile: Dockerfile.dev
+    environment:
+      VITE_FINANCE_API_URL: http://localhost:8000/api/v1
+      CHOKIDAR_USEPOLLING: "true"
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+    volumes:
+      - ../p2:/app
+      - frontend_node_modules:/app/node_modules
+    command: pnpm dev --host 0.0.0.0 --port 3000
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - mahfazati_redis_data:/data
+
+volumes:
+  mahfazati_postgres_data:
+  mahfazati_redis_data:
+  backend_venv:
+  frontend_node_modules:
